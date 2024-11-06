@@ -1,0 +1,25 @@
+version: "3"
+services:
+  broker:
+    image: eclipse-mosquitto:2.0
+    container_name: mqtt_broker
+    ports:
+      - "1883:1883"
+    volumes:
+      - ./mosquitto/config:/mosquitto/config
+      - ./mosquitto/data:/mosquitto/data
+      - ./mosquitto/log:/mosquitto/log
+    networks:
+      - mqtt_network
+
+  client:
+    build: ./client
+    container_name: mqtt_client
+    depends_on:
+      - broker
+    networks:
+      - mqtt_network
+
+networks:
+  mqtt_network:
+    driver: bridge
