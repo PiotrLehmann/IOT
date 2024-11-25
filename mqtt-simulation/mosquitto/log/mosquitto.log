@@ -148,3 +148,37 @@
 1730901647: mosquitto version 2.0.20 running
 1730901648: New connection from 172.19.0.3:44845 on port 1883.
 1730901648: New client connected from 172.19.0.3:44845 as LightSensorSimulator (p2, c1, k60).
+1730903448: Saving in-memory database to /mosquitto/data//mosquitto.db.
+1730904985: Client LightSensorSimulator closed its connection.
+1730904985: mosquitto version 2.0.20 terminating
+1730904985: Saving in-memory database to /mosquitto/data//mosquitto.db.
+1730905129: mosquitto version 2.0.20 starting
+1730905129: Config loaded from /mosquitto/config/mosquitto.conf.
+1730905129: Opening ipv4 listen socket on port 1883.
+1730905129: Opening ipv6 listen socket on port 1883.
+1730905129: mosquitto version 2.0.20 running
+1730905129: New connection from 172.19.0.3:57365 on port 1883.
+1730905129: New client connected from 172.19.0.3:57365 as LightSensorSimulator (p2, c1, k60).
+1730905776: Client LightSensorSimulator closed its connection.
+1730905776: mosquitto version 2.0.20 terminating
+1730905776: Saving in-memory database to /mosquitto/data//mosquitto.db.
+1730905785: mosquitto version 2.0.20 starting
+1730905785: Config loaded from /mosquitto/config/mosquitto.conf.
+1730905785: Opening ipv4 listen socket on port 1883.
+1730905785: Opening ipv6 listen socket on port 1883.
+1730905785: mosquitto version 2.0.20 running
+1730905786: New connection from 172.19.0.3:59749 on port 1883.
+1730905786: New client connected from 172.19.0.3:59749 as LightSensorSimulator (p2, c1, k60).
+1730907361: Client LightSensorSimulator closed its connection.
+1730907361: mosquitto version 2.0.20 terminating
+1730907361: Saving in-memory database to /mosquitto/data//mosquitto.db.
+1730907368: mosquitto version 2.0.20 starting
+1730907368: Config loaded from /mosquitto/config/mosquitto.conf.
+1730907368: Opening ipv4 listen socket on port 1883.
+1730907368: Opening ipv6 listen socket on port 1883.
+1730907368: mosquitto version 2.0.20 running
+1730907369: New connection from 172.19.0.3:40719 on port 1883.
+1730907369: New client connected from 172.19.0.3:40719 as LightSensorSimulator (p2, c1, k60).
+1730908229: Client LightSensorSimulator closed its connection.
+1730908229: mosquitto version 2.0.20 terminating
+1730908229: Saving in-memory database to /mosquitto/data//mosquitto.db.
