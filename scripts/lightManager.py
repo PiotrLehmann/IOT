@@ -58,7 +58,7 @@ def rgb_to_hue_saturation(rgb):
     else:
         saturation = (delta / c_max) * 100  # Saturation as percentage
 
-    return int(min(360, hue)), int(min(360, saturation))
+    return int(min(360, hue)), int(min(100, saturation+1))
 
 async def setLight():
     tapo_username = username
@@ -141,7 +141,6 @@ def on_message(client, userdata, msg):
                 # If payload is not a JSON array, handle it as comma-separated values
                 target_rgb = list(map(int, payload.split(",")))
             
-            print(current_rgb)
             if current_rgb is None:
                 current_rgb = asyncio.run(setColorSimple(target_rgb))
             else:
