@@ -1,3 +1,10 @@
+const LIGHTBULB_CHANGE_PERIOD_SEC = 10; // in seconds
+const TRIGGER_PERIOD_SEC = 10; // in seconds
+const CHANGE_LIGHT_COUNT_LEVEL = Math.round(
+  LIGHTBULB_CHANGE_PERIOD_SEC / TRIGGER_PERIOD_SEC
+);
+const REVERSED_BRIGHTNESS = true;
+
 function getTimeOfDay() {
   const currentHour = new Date().getHours();
   if (currentHour >= 6 && currentHour < 12) {
@@ -37,46 +44,95 @@ function adjustLightColor(r, g, b, timeOfDay) {
   return [r, g, b];
 }
 
-// Get the RGB values
+function desaturateColor(r, g, b) {
+  const maxRGBval = Math.max(r, g, b);
+  const minRGBval = Math.min(r, g, b);
+  const difference = Math.abs(maxRGBval - minRGBval);
+
+  const desaturationLvl = Math.min(0.5, difference / 255);
+
+  const avg = (r + g + b) / 3;
+  r = r + desaturationLvl * (avg - r);
+  g = g + desaturationLvl * (avg - g);
+  b = b + desaturationLvl * (avg - b);
+  return [r, g, b];
+}
+
+let sumRed = context.get("sum_red") || 0;
+let sumGreen = context.get("sum_green") || 0;
+let sumBlue = context.get("sum_blue") || 0;
+let sumClear = context.get("sum_clear") || 0;
+let counter = context.get("counter") || 0;
+
 const red = parseFloat(msg.payload["sensor.light_meter_red"]) || 0;
 const green = parseFloat(msg.payload["sensor.light_meter_green"]) || 0;
 const blue = parseFloat(msg.payload["sensor.light_meter_blue"]) || 0;
 const clear = parseFloat(msg.payload["sensor.light_meter_clear"]) || 0;
 
-// Debug log to check input values
-// node.warn(`Red: ${red}, Green: ${green}, Blue: ${blue}, Clear: ${clear}`);
+sumRed += red;
+sumGreen += green;
+sumBlue += blue;
+sumClear += clear;
+counter += 1;
 
-// Normalize RGB values
-const total = red + green + blue;
-const normalizedRed = total ? (red / total) * 255 : 0;
-const normalizedGreen = total ? (green / total) * 255 : 0;
-const normalizedBlue = total ? (blue / total) * 255 : 0;
+context.set("sum_red", sumRed);
+context.set("sum_green", sumGreen);
+context.set("sum_blue", sumBlue);
+context.set("sum_clear", sumClear);
+context.set("counter", counter);
 
-// Normalize brightness % (Ensure value is between 0 and 100)
-const brightnessPct = Math.min(Math.max((clear / 255) * 100, 0), 100);
+if (counter < CHANGE_LIGHT_COUNT_LEVEL) {
+  return;
+}
+const avgRed = sumRed / counter;
+const avgGreen = sumGreen / counter;
+const avgBlue = sumBlue / counter;
+const avgClear = sumClear / counter;
 
-// Debug log to check normalized values
-node.log(
-  `Normalized Red: ${normalizedRed}, Normalized Green: ${normalizedGreen}, Normalized Blue: ${normalizedBlue}, Brightness (pct): ${brightnessPct}`
-);
+context.set("sum_red", 0);
+context.set("sum_green", 0);
+context.set("sum_blue", 0);
+context.set("sum_clear", 0);
+context.set("counter", 0);
+
+const total = avgRed + avgGreen + avgBlue;
+const normalizedRed = total ? (avgRed / total) * 255 : 0;
+const normalizedGreen = total ? (avgGreen / total) * 255 : 0;
+const normalizedBlue = total ? (avgBlue / total) * 255 : 0;
+
+const brightnessInPct = Math.min(Math.max((avgClear / 255) * 100, 0), 100);
+
+const outputBrightness = REVERSED_BRIGHTNESS
+  ? 100 - brightnessInPct
+  : brightnessInPct;
 
 const timeOfDay = getTimeOfDay();
-
-const [adjustedRed, adjustedGreen, adjustedBlue] = adjustLightColor(
+let [adjustedRed, adjustedGreen, adjustedBlue] = adjustLightColor(
   normalizedRed,
   normalizedGreen,
   normalizedBlue,
   timeOfDay
 );
 
-node.log(
-  `Adjusted Red: ${adjustedRed}, Adjusted Green: ${adjustedGreen}, Adjusted Blue: ${adjustedBlue}, Brightness (pct): ${brightnessPct}`
+[adjustedRed, adjustedGreen, adjustedBlue] = desaturateColor(
+  adjustedRed,
+  adjustedGreen,
+  adjustedBlue
 );
 
 msg.payload = {
   entity_id: "light.living_room_light",
-  rgb_color: [adjustedRed, adjustedGreen, adjustedBlue],
-  brightness_pct: Math.round(brightnessPct), // Use percentage for brightness
+  rgb_color: [
+    Math.round(Math.max(0, Math.min(255, adjustedRed))),
+    Math.round(Math.max(0, Math.min(255, adjustedGreen))),
+    Math.round(Math.max(0, Math.min(255, adjustedBlue))),
+  ],
+  brightness_pct: Math.round(Math.max(0, Math.min(100, outputBrightness))),
 };
+
+context.set("prev_red", adjustedRed);
+context.set("prev_green", adjustedGreen);
+context.set("prev_blue", adjustedBlue);
+context.set("prev_brightness", outputBrightness);
 
 return msg;
