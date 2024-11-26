@@ -15,6 +15,7 @@ mqtt_user = os.getenv('MQTT_USER')
 mqtt_pwd = os.getenv('MQTT_PWD')
 
 current_rgb = None
+current_bright = 0
 
 # Define MQTT broker and topic details
 broker_ip = "192.168.21.37"
@@ -74,9 +75,20 @@ async def turnOn():
 async def turnOff():
     await device.off()
 
-async def setBrightness(bright255):
-    bright = int(bright255 * 100/255)
-    await device.set_brightness(bright)
+async def setBrightness(target_bright, steps = 40, delay = 0.02):
+    def interpolate(start, end, steps):
+        """Generate a series of values from start to end in `steps` steps."""
+        return [(start + (end - start) * i / steps) for i in range(steps + 1)]
+
+    values = interpolate(current_brightness, target_bright, steps)
+
+    for val in values:
+        bright = int(max(1,(val/255) * 100))
+        print(bright)
+        await device.set_brightness(bright)
+        
+        await asyncio.sleep(delay)
+    return target_bright
 
 async def setColor(target_rgb, steps=50, delay=0.05):
     """Gradually change color from current_rgb to target_rgb."""
@@ -116,10 +128,10 @@ def on_message(client, userdata, msg):
         mqttc.publish(light_state_topic, current_state)
     
     elif msg.topic == brightness_command_topic:
-        current_brightness = int(msg.payload.decode())
-        asyncio.run(setBrightness(current_brightness))
-        mqttc.publish(brightness_state_topic, current_brightness)
-    
+        target = int(msg.payload.decode())
+        mqttc.publish(brightness_state_topic, target)
+        current_brightness = asyncio.run(setBrightness(target))
+        
     elif msg.topic == rgb_command_topic:
         try:
             # Parse the RGB payload; attempt to handle unexpected formats
