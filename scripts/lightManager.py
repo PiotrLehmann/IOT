@@ -14,6 +14,8 @@ password = os.getenv('MY_APP_PASSWORD')
 mqtt_user = os.getenv('MQTT_USER')
 mqtt_pwd = os.getenv('MQTT_PWD')
 
+current_rgb = None
+
 # Define MQTT broker and topic details
 broker_ip = "192.168.21.37"
 broker_port = 1883
@@ -27,23 +29,8 @@ rgb_state_topic = "home/lights/my_light/rgb/state"
 # Initialize state variables
 current_state = "OFF"
 current_brightness = 0
-current_rgb = [0, 0, 0]
 
 def rgb_to_hue_saturation(rgb):
-    """
-    Convert RGB values to Hue and Saturation.
-
-    Args:
-        r (int): Red value (0-255)
-        g (int): Green value (0-255)
-        b (int): Blue value (0-255)
-
-    Returns:
-        tuple: (hue, saturation)
-            hue (float): Hue angle in degrees (0 to 360)
-            saturation (float): Saturation percentage (0 to 100)
-    """
-
     # Normalize RGB values to the range [0, 1]
     r = rgb[0] / 255.0
     g = rgb[1] / 255.0
@@ -70,7 +57,7 @@ def rgb_to_hue_saturation(rgb):
     else:
         saturation = (delta / c_max) * 100  # Saturation as percentage
 
-    return int(min(100, hue)), int(min(100, saturation))
+    return int(min(360, hue)), int(min(360, saturation))
 
 async def setLight():
     tapo_username = username
@@ -91,9 +78,29 @@ async def setBrightness(bright255):
     bright = int(bright255 * 100/255)
     await device.set_brightness(bright)
 
-async def setColor(current_rgb):
-    hue, saturation = rgb_to_hue_saturation(current_rgb)
+async def setColor(target_rgb, steps=50, delay=0.05):
+    """Gradually change color from current_rgb to target_rgb."""
+    def interpolate(start, end, steps):
+        """Generate a series of values from start to end in `steps` steps."""
+        return [(start + (end - start) * i / steps) for i in range(steps + 1)]
+
+    # Break down RGB into individual components
+    r_values = interpolate(current_rgb[0], target_rgb[0], steps)
+    g_values = interpolate(current_rgb[1], target_rgb[1], steps)
+    b_values = interpolate(current_rgb[2], target_rgb[2], steps)
+
+    for r, g, b in zip(r_values, g_values, b_values):
+        hue, saturation = rgb_to_hue_saturation((r, g, b))
+        print([r,g,b])
+        print(hue, " ", saturation)
+        await device.set_hue_saturation(hue, saturation)
+        await asyncio.sleep(delay)
+    return target_rgb
+
+async def setColorSimple(target_rgb):
+    hue, saturation = rgb_to_hue_saturation(target_rgb)
     await device.set_hue_saturation(hue, saturation)
+    return target_rgb
 
 
 # Define MQTT client callbacks
@@ -120,13 +127,18 @@ def on_message(client, userdata, msg):
             # Parse the RGB payload; attempt to handle unexpected formats
             payload = msg.payload.decode()
             if payload.startswith("[") and payload.endswith("]"):
-                current_rgb = json.loads(payload)
+                target_rgb = json.loads(payload)
             else:
                 # If payload is not a JSON array, handle it as comma-separated values
-                current_rgb = list(map(int, payload.split(",")))
+                target_rgb = list(map(int, payload.split(",")))
             
-            asyncio.run(setColor(current_rgb))
-            mqttc.publish(rgb_state_topic, json.dumps(current_rgb))
+            print(current_rgb)
+            if current_rgb is None:
+                current_rgb = asyncio.run(setColorSimple(target_rgb))
+            else:
+                current_rgb =asyncio.run(setColor(target_rgb))
+            
+            mqttc.publish(rgb_state_topic, json.dumps(target_rgb))
         
         except (ValueError, json.JSONDecodeError) as e:
             print(f"Failed to parse RGB payload: {payload}. Error: {e}")
@@ -137,6 +149,7 @@ asyncio.run(setLight())
 mqttc = mqtt.Client(mqtt.CallbackAPIVersion.VERSION2)
 mqttc.username_pw_set(mqtt_user, mqtt_pwd)
 mqttc.on_message = on_message
+
 
 # Connect and subscribe to command topics
 mqttc.connect(broker_ip, broker_port, 60)
