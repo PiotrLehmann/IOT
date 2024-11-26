@@ -91,8 +91,6 @@ async def setColor(target_rgb, steps=50, delay=0.05):
 
     for r, g, b in zip(r_values, g_values, b_values):
         hue, saturation = rgb_to_hue_saturation((r, g, b))
-        print([r,g,b])
-        print(hue, " ", saturation)
         await device.set_hue_saturation(hue, saturation)
         await asyncio.sleep(delay)
     return target_rgb
