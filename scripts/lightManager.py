@@ -84,7 +84,6 @@ async def setBrightness(target_bright, steps = 40, delay = 0.02):
 
     for val in values:
         bright = int(max(1,(val/255) * 100))
-        print(bright)
         await device.set_brightness(bright)
         
         await asyncio.sleep(delay)
